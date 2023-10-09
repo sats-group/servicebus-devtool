@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Identity;
@@ -76,6 +75,7 @@ static async Task<int> HandlePeek(PeekOptions options)
                 options.Delete == true
                     ? await receiver.ReceiveMessagesAsync(
                         maxMessages: maxMessages,
+                        maxWaitTime: TimeSpan.FromSeconds(1),
                         cancellationToken: cts.Token)
                     : await receiver.PeekMessagesAsync(
                         fromSequenceNumber: sequenceNumber,
@@ -90,12 +90,12 @@ static async Task<int> HandlePeek(PeekOptions options)
             await using var stdOut = Console.OpenStandardOutput();
             await using var stdOutWriter = new StreamWriter(stdOut);
 
-            foreach (var receivedMessage in msgs.Skip(sequenceNumber is null ? 0 : 1))
+            foreach (var receivedMessage in msgs)
             {
-                await stdOutWriter.WriteLineAsync(receivedMessage.Body.ToString());
+                await stdOutWriter.WriteLineAsync($"{receivedMessage.EnqueuedTime:O},{receivedMessage.Body}");
                 await stdOutWriter.FlushAsync();
                 count++;
-                sequenceNumber = receivedMessage.SequenceNumber;
+                sequenceNumber = receivedMessage.SequenceNumber + 1;
             }
         }
 
